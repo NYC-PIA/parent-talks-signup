@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parent Talks - facilitator signup</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 15px; color: #202124;
+         margin: 0; padding: 16px; background: #fff; }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .intro { color: #5f6368; font-size: 14px; margin: 0 0 20px; }
+  h2 { font-size: 16px; margin: 28px 0 10px; padding-bottom: 6px;
+       border-bottom: 1px solid #e0e0e0; }
+  .talk { border: 1px solid #dadce0; border-radius: 6px; padding: 12px 14px;
+          margin-bottom: 10px; }
+  .talk .who { font-weight: bold; }
+  .talk .when { color: #444; margin-top: 2px; }
+  .talk .meta { color: #5f6368; font-size: 13px; margin-top: 4px; }
+  .actions { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+  button { padding: 8px 14px; font-size: 14px; border-radius: 4px;
+           border: 1px solid #c0c0c0; background: #fff; cursor: pointer; }
+  button.primary { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+  button.quiet { color: #b00020; border-color: #e0b4bc; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button:focus-visible { outline: 2px solid #1a73e8; outline-offset: 2px; }
+  .mine { background: #f1f8f1; border-color: #c5e0c5; }
+  .pendingcard { background: #fffbf0; border-color: #e8d9a8; }
+  .tag { font-size: 11px; font-weight: bold; text-transform: uppercase;
+         letter-spacing: 0.04em; padding: 2px 7px; border-radius: 10px;
+         margin-left: 6px; vertical-align: middle; }
+  .tag.confirmed { background: #d9ead3; color: #274e13; }
+  .tag.pending { background: #fce5cd; color: #7f4f24; }
+  .empty { color: #5f6368; font-style: italic; }
+  #msg { padding: 10px 12px; border-radius: 4px; margin-bottom: 16px; display: none;
+         white-space: pre-line; }
+  #msg.ok { display: block; background: #d9ead3; }
+  #msg.err { display: block; background: #f4c7c3; }
+  .loading { color: #5f6368; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="title">Parent Talks - facilitator signup</h1>
+  <p class="intro" id="intro"></p>
+
+  <div id="msg"></div>
+  <p id="loading" class="loading">Loading...</p>
+
+  <div id="main" style="display:none;">
+    <p id="hello"></p>
+
+    <h2>My talks</h2>
+    <div id="mine"></div>
+
+    <h2>Open for signup</h2>
+    <div id="open"></div>
+  </div>
+</div>
+
+<script>
+  // The Apps Script web app's /exec URL (Deploy > Manage deployments).
+  // Keep it in step with FS_CONFIG_.webAppUrl in Facilitator Signup.gs.
+  var API_URL = 'https://script.google.com/macros/s/AKfycbzheOIYb7BM8bVNinTpwLvedpYSZOBMKICaxkBG7jCdzGPVsYLw9XGRF26LHwoOiOBL7g/exec';
+
+  var UNKNOWN_LINK =
+    "This link isn't recognised. It may have been reissued - check the most " +
+    'recent email, or contact NYC-Parents in Action for a new one.';
+
+  function readToken() {
+    var q = new URLSearchParams(window.location.search).get('t');
+    if (q) return q.trim();
+    var h = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('t');
+    return h ? h.trim() : '';
+  }
+
+  var TOKEN = readToken();
+  var RELEASE_CONTACT = 'NYC-Parents in Action';
+  var busy = false;
+
+  // Every call goes out with no cookies, so whichever Google accounts
+  // the browser is signed into never come into it.
+  function api(method, payload) {
+    var url = API_URL;
+    var opts = { method: method, credentials: 'omit', redirect: 'follow', cache: 'no-store' };
+    if (method === 'GET') {
+      url += (url.indexOf('?') === -1 ? '?' : '&') +
+             'action=data&t=' + encodeURIComponent(TOKEN) + '&_=' + Date.now();
+    } else {
+      // text/plain keeps this a simple request the script can answer.
+      opts.headers = { 'Content-Type': 'text/plain;charset=utf-8' };
+      opts.body = JSON.stringify(payload);
+    }
+    return fetch(url, opts).then(function (r) {
+      if (!r.ok) throw new Error('the server returned ' + r.status);
+      return r.json();
+    });
+  }
+
+  function show(text, ok) {
+    var m = document.getElementById('msg');
+    m.textContent = text;
+    m.className = ok ? 'ok' : 'err';
+    window.scrollTo(0, 0);
+  }
+
+  function clearMsg() {
+    var m = document.getElementById('msg');
+    m.textContent = '';
+    m.className = '';
+  }
+
+  function doneLoading() {
+    document.getElementById('loading').style.display = 'none';
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function load() {
+    api('GET')
+      .then(render)
+      .catch(function (e) { doneLoading(); show('Could not load: ' + e.message, false); });
+  }
+
+  function render(d) {
+    doneLoading();
+    if (d && d.title) {
+      document.getElementById('title').textContent = d.title;
+      document.title = d.title;
+    }
+    if (d && d.intro) document.getElementById('intro').textContent = d.intro;
+    if (d && d.releaseContact) RELEASE_CONTACT = d.releaseContact;
+
+    if (!d || d.ok !== 'true') {
+      document.getElementById('main').style.display = 'none';
+      if (d && d.error === 'unknown link') show(UNKNOWN_LINK, false);
+      else show('Could not load: ' + ((d && d.error) || 'unknown error'), false);
+      return;
+    }
+
+    document.getElementById('hello').textContent = 'Hello, ' + d.name + '.';
+    document.getElementById('main').style.display = 'block';
+
+    var mineEl = document.getElementById('mine');
+    if (!d.mine.length) {
+      mineEl.innerHTML = '<p class="empty">You have not put your name down for anything yet.</p>';
+    } else {
+      mineEl.innerHTML = d.mine.map(function (t) {
+        var isConfirmed = t.confirmed === 'true';
+        var badge = isConfirmed
+          ? '<span class="tag confirmed">Confirmed facilitator</span>'
+          : '<span class="tag pending">Volunteered</span>';
+        var note = isConfirmed
+          ? 'You are on this talk. Please keep the date - the school and your ' +
+            'co-facilitator have been told you are coming.'
+          : 'Your name is down. You are not on the talk yet - ' + esc(RELEASE_CONTACT) +
+            ' confirms the facilitators and will be in touch. Please hold the date ' +
+            'in the meantime.';
+        var people = isConfirmed
+          ? 'You: ' + esc(t.roles.join(', ')) +
+            (t.partner ? ' &middot; with ' + esc(t.partner) : ' &middot; co-facilitator still needed')
+          : '';
+        return '<div class="talk ' + (isConfirmed ? 'mine' : 'pendingcard') + '">' +
+          '<div class="who">' + esc(t.label) + ' ' + badge + '</div>' +
+          '<div class="when">' + esc(t.when) + '</div>' +
+          (t.location ? '<div class="meta">' + esc(t.location) + '</div>' : '') +
+          '<div class="meta">' + note + '</div>' +
+          (people ? '<div class="meta">' + people + '</div>' : '') +
+          '<div class="actions">' +
+            '<button class="quiet" data-release="' + esc(t.eventId) + '">' +
+              (isConfirmed ? 'Ask to be released' : 'Withdraw my name') + '</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    var openEl = document.getElementById('open');
+    if (!d.open.length) {
+      openEl.innerHTML = '<p class="empty">Nothing is open for signup right now. ' +
+                         'Thank you - check back another time.</p>';
+    } else {
+      openEl.innerHTML = d.open.map(function (t) {
+        return '<div class="talk">' +
+          '<div class="who">' + esc(t.label) + '</div>' +
+          '<div class="when">' + esc(t.when) + '</div>' +
+          (t.location ? '<div class="meta">' + esc(t.location) + '</div>' : '') +
+          '<div class="actions">' +
+            '<button class="primary" data-claim="' + esc(t.eventId) + '">' +
+              'Sign up for this talk</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+  }
+
+  function setBusy(on) {
+    busy = on;
+    var bs = document.querySelectorAll('button');
+    for (var i = 0; i < bs.length; i++) bs[i].disabled = on;
+  }
+
+  function claim(eventId) {
+    if (busy) return;
+    clearMsg();
+    setBusy(true);
+    api('POST', { action: 'claim', t: TOKEN, eventId: eventId })
+      .then(function (r) {
+        setBusy(false);
+        if (r.ok !== 'true') { show(r.error, false); load(); return; }
+        show('Thank you - your name is down. ' + RELEASE_CONTACT + ' confirms the ' +
+             'facilitators, so hold the date until you hear back. Volunteer for ' +
+             'another if you can.', true);
+        load();
+      })
+      .catch(function (e) { setBusy(false); show('Failed: ' + e.message, false); });
+  }
+
+  function askRelease(eventId) {
+    if (busy) return;
+    var reason = window.prompt(
+      'Ask to be released from this talk?\n\n' +
+      'It goes to ' + RELEASE_CONTACT + ', who will be in touch. You stay ' +
+      'down for the talk until then.\n\n' +
+      'Anything they should know (optional):', '');
+    if (reason === null) return;   // cancelled
+    clearMsg();
+    setBusy(true);
+    api('POST', { action: 'release', t: TOKEN, eventId: eventId, reason: reason })
+      .then(function (r) {
+        setBusy(false);
+        if (r.ok !== 'true') { show(r.error, false); load(); return; }
+        show('Sent to ' + RELEASE_CONTACT + ', with a copy to you. You are still ' +
+             'down for the talk until you hear back - please keep the date for now.', true);
+        load();
+      })
+      .catch(function (e) { setBusy(false); show('Failed: ' + e.message, false); });
+  }
+
+  // One listener for every button, so event IDs never need quoting
+  // inside onclick attributes.
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest ? ev.target.closest('button') : null;
+    if (!b || b.disabled) return;
+    if (b.hasAttribute('data-claim')) claim(b.getAttribute('data-claim'));
+    else if (b.hasAttribute('data-release')) askRelease(b.getAttribute('data-release'));
+  });
+
+  if (TOKEN) {
+    load();
+  } else {
+    doneLoading();
+    show(UNKNOWN_LINK, false);
+  }
+</script>
+</body>
+</html>
