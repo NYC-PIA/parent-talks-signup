@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Parent Talks - facilitator signup</title>
+<title>Parent Talk Facilitation Tracker</title>
 <style>
   body { font-family: Arial, Helvetica, sans-serif; font-size: 15px; color: #202124;
          margin: 0; padding: 16px; background: #fff; }
   .wrap { max-width: 720px; margin: 0 auto; }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  .intro { color: #5f6368; font-size: 14px; margin: 0 0 20px; }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  .welcome { margin: 0 0 16px; }
+  .intro { color: #5f6368; font-size: 14px; margin: 0 0 12px; }
   h2 { font-size: 16px; margin: 28px 0 10px; padding-bottom: 6px;
        border-bottom: 1px solid #e0e0e0; }
   .talk { border: 1px solid #dadce0; border-radius: 6px; padding: 12px 14px;
@@ -43,8 +44,10 @@
 </head>
 <body>
 <div class="wrap">
-  <h1 id="title">Parent Talks - facilitator signup</h1>
-  <p class="intro" id="intro"></p>
+  <h1 id="title">Parent Talk Facilitation Tracker</h1>
+  <p class="welcome" id="welcome">Thank you for signing up to facilitate Parent Talks with
+    NYC-PIA. Below is a list of your current assignments as well as Talks that are open
+    for signup. Please select as many as you would like!</p>
 
   <div id="msg"></div>
   <p id="loading" class="loading">Loading...</p>
@@ -56,6 +59,7 @@
     <div id="mine"></div>
 
     <h2>Open for signup</h2>
+    <p class="intro" id="intro"></p>
     <div id="open"></div>
   </div>
 </div>
@@ -171,6 +175,7 @@
       document.getElementById('title').textContent = d.title;
       document.title = d.title;
     }
+    if (d && d.welcome) document.getElementById('welcome').textContent = d.welcome;
     if (d && d.intro) document.getElementById('intro').textContent = d.intro;
     if (d && d.releaseContact) RELEASE_CONTACT = d.releaseContact;
 
@@ -190,8 +195,7 @@
     } else {
       var anyConfirmed = d.mine.some(function (t) { return t.confirmed === 'true'; });
       mineEl.innerHTML = (anyConfirmed
-        ? '<p class="mynote"><strong>Confirmed Parent Talks</strong> \u2014 Your school and ' +
-          'co-facilitator are counting on you. Thank you!</p>'
+        ? '<p class="mynote"><strong>Confirmed Parent Talks</strong></p>'
         : '') + d.mine.map(function (t) {
         var isConfirmed = t.confirmed === 'true';
         var badge = isConfirmed
