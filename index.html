@@ -120,9 +120,36 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  // The last page this link saw is kept in this browser, so a return
+  // visit shows it at once while the fresh copy loads. Buttons stay
+  // off until the fresh copy arrives, so nobody acts on old data.
+  var CACHE_KEY = 'pt-signup:' + TOKEN;
+
+  function readCache() {
+    try {
+      var s = localStorage.getItem(CACHE_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch (e) { return null; }
+  }
+
+  function saveCache(d) {
+    try {
+      if (d && d.ok === 'true') localStorage.setItem(CACHE_KEY, JSON.stringify(d));
+      else localStorage.removeItem(CACHE_KEY);
+    } catch (e) {}
+  }
+
+  function showChecking() {
+    var l = document.getElementById('loading');
+    l.textContent = 'Checking for the latest...';
+    l.style.display = 'block';
+    var bs = document.querySelectorAll('button');
+    for (var i = 0; i < bs.length; i++) bs[i].disabled = true;
+  }
+
   function load() {
     api('GET')
-      .then(render)
+      .then(function (d) { saveCache(d); render(d); })
       .catch(function (e) { doneLoading(); show('Could not load: ' + e.message, false); });
   }
 
@@ -250,6 +277,8 @@
   });
 
   if (TOKEN) {
+    var cached = readCache();
+    if (cached) { render(cached); showChecking(); }
     load();
   } else {
     doneLoading();
