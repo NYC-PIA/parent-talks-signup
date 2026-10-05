@@ -31,6 +31,8 @@
          margin-left: 6px; vertical-align: middle; }
   .tag.confirmed { background: #d9ead3; color: #274e13; }
   .tag.pending { background: #fce5cd; color: #7f4f24; }
+  .mynote { margin: 0 0 10px; }
+  .meta a { color: #1a73e8; }
   .empty { color: #5f6368; font-style: italic; }
   #msg { padding: 10px 12px; border-radius: 4px; margin-bottom: 16px; display: none;
          white-space: pre-line; }
@@ -147,6 +149,16 @@
     for (var i = 0; i < bs.length; i++) bs[i].disabled = true;
   }
 
+  // One person and how to reach them: name, then email and phone as
+  // links that open mail or dial on a phone.
+  function personLine(label, p) {
+    var bits = [esc(p.name)];
+    if (p.email) bits.push('<a href="mailto:' + esc(p.email) + '">' + esc(p.email) + '</a>');
+    if (p.phone) bits.push('<a href="tel:' + esc(String(p.phone).replace(/[^0-9+]/g, '')) +
+                           '">' + esc(p.phone) + '</a>');
+    return '<div class="meta">' + label + ': ' + bits.join(' &middot; ') + '</div>';
+  }
+
   function load() {
     api('GET')
       .then(function (d) { saveCache(d); render(d); })
@@ -176,27 +188,38 @@
     if (!d.mine.length) {
       mineEl.innerHTML = '<p class="empty">You have not put your name down for anything yet.</p>';
     } else {
-      mineEl.innerHTML = d.mine.map(function (t) {
+      var anyConfirmed = d.mine.some(function (t) { return t.confirmed === 'true'; });
+      mineEl.innerHTML = (anyConfirmed
+        ? '<p class="mynote"><strong>Confirmed Parent Talks</strong> \u2014 Your school and ' +
+          'co-facilitator are counting on you. Thank you!</p>'
+        : '') + d.mine.map(function (t) {
         var isConfirmed = t.confirmed === 'true';
         var badge = isConfirmed
           ? '<span class="tag confirmed">Confirmed facilitator</span>'
           : '<span class="tag pending">Volunteered</span>';
         var note = isConfirmed
-          ? 'You are on this talk. Please keep the date - the school and your ' +
-            'co-facilitator have been told you are coming.'
+          ? ''
           : 'Your name is down. You are not on the talk yet - ' + esc(RELEASE_CONTACT) +
             ' confirms the facilitators and will be in touch. Please hold the date ' +
             'in the meantime.';
-        var people = isConfirmed
-          ? 'You: ' + esc(t.roles.join(', ')) +
-            (t.partner ? ' &middot; with ' + esc(t.partner) : ' &middot; co-facilitator still needed')
-          : '';
+        var people = '';
+        if (isConfirmed) {
+          var partners = t.partners || [];
+          var contacts = t.contacts || [];
+          people = '<div class="meta">You: ' + esc(t.roles.join(', ')) + '</div>' +
+            (partners.length
+              ? partners.map(function (p) { return personLine('Co-facilitator', p); }).join('')
+              : '<div class="meta">Co-facilitator: still needed</div>') +
+            (contacts.length
+              ? contacts.map(function (c) { return personLine('Parent Talk contact', c); }).join('')
+              : '<div class="meta">Parent Talk contact: not yet assigned</div>');
+        }
         return '<div class="talk ' + (isConfirmed ? 'mine' : 'pendingcard') + '">' +
           '<div class="who">' + esc(t.label) + ' ' + badge + '</div>' +
           '<div class="when">' + esc(t.when) + '</div>' +
           (t.location ? '<div class="meta">' + esc(t.location) + '</div>' : '') +
-          '<div class="meta">' + note + '</div>' +
-          (people ? '<div class="meta">' + people + '</div>' : '') +
+          (note ? '<div class="meta">' + note + '</div>' : '') +
+          people +
           '<div class="actions">' +
             '<button class="quiet" data-release="' + esc(t.eventId) + '">' +
               (isConfirmed ? 'Ask to be released' : 'Withdraw my name') + '</button>' +
@@ -224,6 +247,14 @@
     }
   }
 
+  // A signup or release answers with the refreshed page, so it is drawn
+  // straight from the reply. Only an older script without that falls
+  // back to asking again.
+  function redraw(r) {
+    if (r && r.page) { saveCache(r.page); render(r.page); }
+    else load();
+  }
+
   function setBusy(on) {
     busy = on;
     var bs = document.querySelectorAll('button');
@@ -237,11 +268,11 @@
     api('POST', { action: 'claim', t: TOKEN, eventId: eventId })
       .then(function (r) {
         setBusy(false);
-        if (r.ok !== 'true') { show(r.error, false); load(); return; }
+        if (r.ok !== 'true') { show(r.error, false); redraw(r); return; }
         show('Thank you - your name is down. ' + RELEASE_CONTACT + ' confirms the ' +
              'facilitators, so hold the date until you hear back. Volunteer for ' +
              'another if you can.', true);
-        load();
+        redraw(r);
       })
       .catch(function (e) { setBusy(false); show('Failed: ' + e.message, false); });
   }
@@ -259,10 +290,10 @@
     api('POST', { action: 'release', t: TOKEN, eventId: eventId, reason: reason })
       .then(function (r) {
         setBusy(false);
-        if (r.ok !== 'true') { show(r.error, false); load(); return; }
+        if (r.ok !== 'true') { show(r.error, false); redraw(r); return; }
         show('Sent to ' + RELEASE_CONTACT + ', with a copy to you. You are still ' +
              'down for the talk until you hear back - please keep the date for now.', true);
-        load();
+        redraw(r);
       })
       .catch(function (e) { setBusy(false); show('Failed: ' + e.message, false); });
   }
