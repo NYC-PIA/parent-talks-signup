@@ -10,6 +10,8 @@
   .wrap { max-width: 900px; margin: 0 auto; }
   h1 { font-size: 20px; margin: 0 0 6px; }
   .welcome { margin: 0 0 16px; }
+  .hello { font-size: 17px; font-weight: bold; margin: 0 0 6px; }
+  .hello:empty { display: none; }
   .intro { color: #5f6368; font-size: 14px; margin: 0 0 12px; }
   h2 { font-size: 16px; margin: 28px 0 10px; padding-bottom: 6px;
        border-bottom: 1px solid #e0e0e0; }
@@ -54,6 +56,7 @@
 </head>
 <body>
 <div class="wrap">
+  <p id="hello" class="hello"></p>
   <h1 id="title">Parent Talk Facilitation Tracker</h1>
   <p class="welcome" id="welcome">Thank you for signing up to facilitate Parent Talks with
     NYC-PIA. Below is a list of your current assignments as well as Talks that are open
@@ -63,7 +66,6 @@
   <p id="loading" class="loading">Loading...</p>
 
   <div id="main" style="display:none;">
-    <p id="hello"></p>
 
     <h2>Open for signup</h2>
     <p class="intro" id="intro"></p>
@@ -209,7 +211,7 @@
         : '') + d.mine.map(function (t) {
         var isConfirmed = t.confirmed === 'true';
         var badge = isConfirmed
-          ? '<span class="tag confirmed">Confirmed facilitator</span>'
+          ? '<span class="tag confirmed">Confirmed</span>'
           : '<span class="tag pending">Volunteered</span>';
         var note = isConfirmed
           ? ''
