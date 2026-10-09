@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Parent Talk RSVP | NYC-Parents in Action</title>
+  <style>
+    :root { --ink:#1f2a37; --muted:#5b6675; --accent:#1d5d8f; --line:#d9dee5; --bg:#f6f7f9; --card:#fff; --tint:#eef4f9; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+           color:var(--ink); background:var(--bg); line-height:1.5; }
+    .wrap { max-width:640px; margin:0 auto; padding:24px 16px 48px; }
+    .org { font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); font-weight:600; }
+    h1 { font-size:26px; margin:6px 0 12px; line-height:1.25; }
+    .tagline { font-size:18px; font-weight:600; color:var(--accent); margin:0 0 10px; }
+    p { margin:0 0 12px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:20px; margin-bottom:18px; }
+    .event { background:var(--tint); border-color:#cfe0ee; }
+    .event .ename { font-weight:700; font-size:18px; }
+    .event .eline { margin:2px 0; }
+    .event .note { margin-top:8px; font-style:italic; }
+    .cal { margin-top:12px; display:flex; flex-wrap:wrap; gap:10px; font-size:14px; }
+    .cal a { color:var(--accent); font-weight:600; text-decoration:none; border:1px solid #b9d0e3;
+             border-radius:6px; padding:6px 10px; background:#fff; }
+    .directions { font-size:14px; color:var(--muted); }
+    .cta { font-weight:700; margin:4px 0 14px; }
+    h2 { font-size:17px; margin:0 0 12px; }
+    label.q { display:block; font-weight:600; margin:16px 0 6px; }
+    label.q:first-child { margin-top:0; }
+    .req { color:#a33; }
+    .row2 { display:flex; gap:12px; } .row2 > div { flex:1; }
+    @media (max-width:420px) { .row2 { flex-direction:column; gap:0; } }
+    input[type=text], input[type=email], textarea {
+      width:100%; padding:10px; border:1px solid var(--line); border-radius:6px; font:inherit; }
+    textarea { min-height:90px; resize:vertical; }
+    .yn { display:flex; gap:18px; }
+    .yn label { font-weight:400; }
+    .hint { font-size:13px; color:var(--muted); margin-top:4px; }
+    button { margin-top:20px; background:var(--accent); color:#fff; border:0; border-radius:6px;
+             padding:12px 20px; font:inherit; font-weight:600; cursor:pointer; }
+    button:disabled { opacity:.6; cursor:default; }
+    .msg { margin-top:14px; font-weight:600; }
+    .err { color:#a33; } .ok { color:#1f7a3a; }
+    .countline { font-size:17px; }
+    .count { font-size:30px; font-weight:700; color:var(--accent); }
+    ul { padding-left:20px; margin:8px 0 0; } li { margin:3px 0; }
+    .names { columns:2; column-gap:24px; }
+    @media (max-width:420px) { .names { columns:1; } }
+    .empty { color:var(--muted); font-style:italic; }
+    .hidden { display:none; }
+    .cloud { display:flex; flex-wrap:wrap; justify-content:center; align-items:center;
+             gap:6px 14px; padding:8px 4px; line-height:1.1; }
+    .cloud span { font-weight:600; white-space:nowrap; }
+    .c1 { color:#1d5d8f; } .c2 { color:#2f7d6d; } .c3 { color:#7a4f9a; } .c4 { color:#b5651d; } .c5 { color:#3d4b5c; }
+    details { margin-top:12px; font-size:14px; }
+    summary { cursor:pointer; color:var(--accent); font-weight:600; }
+    .footer { font-size:13px; color:var(--muted); text-align:center; margin-top:24px; }
+    .footer a { color:var(--accent); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="org">NYC-Parents in Action</div>
+  <h1 id="title">RSVP for the Parent Talk</h1>
+
+  <p class="tagline">Thriving kids grow up in connected communities—and parents are part of that too.</p>
+  <p>Join us for a Parent Talk and add your voice to the conversation. We’ll talk about what matters to us—no slides,
+     no pressure, just open conversation in a supportive space.</p>
+
+  <div class="card event" id="event">
+    <div class="ename" id="ename">Loading…</div>
+    <div class="eline" id="eschool"></div>
+    <div class="eline" id="edate"></div>
+    <div class="eline" id="etime"></div>
+    <div class="eline" id="eloc"></div>
+    <div class="note" id="erefresh"></div>
+    <div class="cal hidden" id="cal">
+      <a id="gcal" target="_blank" rel="noopener">+ Google Calendar</a>
+      <a id="ics" href="#">+ Outlook / Apple / Yahoo (.ics)</a>
+    </div>
+  </div>
+
+  <div id="desc"></div>
+  <p class="directions" id="directions"></p>
+
+  <p class="cta" id="cta">Please RSVP below.</p>
+
+  <div class="card" id="formCard">
+    <form id="f" novalidate>
+      <div class="row2">
+        <div>
+          <label class="q" for="first">First Name <span class="req">*</span></label>
+          <input type="text" id="first" maxlength="60" autocomplete="given-name" required>
+        </div>
+        <div>
+          <label class="q" for="last">Last Name <span class="req">*</span></label>
+          <input type="text" id="last" maxlength="60" autocomplete="family-name" required>
+        </div>
+      </div>
+
+      <label class="q" for="email">Email address <span class="req">*</span></label>
+      <input type="email" id="email" maxlength="200" autocomplete="email" required>
+
+      <label class="q">Can we add your attendance to the signup list so your fellow parents will know you plan to join?</label>
+      <div class="yn">
+        <label><input type="radio" name="show" value="Yes" checked> Yes</label>
+        <label><input type="radio" name="show" value="No"> No</label>
+      </div>
+
+      <label class="q">Do you want to join the NYC-Parents in Action mailing list?</label>
+      <div class="yn">
+        <label><input type="radio" name="mailing" value="Yes"> Yes</label>
+        <label><input type="radio" name="mailing" value="No" checked> No</label>
+      </div>
+
+      <label class="q">Do you want to add any topics to the signup wall?</label>
+      <div class="yn">
+        <label><input type="radio" name="wall" value="Yes" checked> Yes</label>
+        <label><input type="radio" name="wall" value="No"> No</label>
+      </div>
+      <div class="hint">Topics on the wall are shown without your name.</div>
+
+      <label class="q" for="topics">What topics do you want to bring to the meeting?</label>
+      <textarea id="topics" maxlength="1000"></textarea>
+
+      <button type="submit" id="btn">Submit RSVP</button>
+      <div class="msg" id="msg"></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Who's coming</h2>
+    <div class="countline"><span class="count" id="count">–</span> <span id="countLabel">parents attending</span></div>
+    <ul class="names" id="names"></ul>
+  </div>
+
+  <div class="card">
+    <h2>Topics parents want to raise</h2>
+    <div class="cloud" id="cloud"></div>
+    <details id="allTopics" class="hidden">
+      <summary>See all topics</summary>
+      <ul id="topicList"></ul>
+    </details>
+  </div>
+
+  <div class="footer">
+    Parent Talks are led by professionally trained Facilitators from NYC-Parents in Action, Inc.,
+    a not-for-profit organization founded in 1980. Learn more at
+    <a href="https://www.parentsinaction.org" target="_blank" rel="noopener">www.parentsinaction.org</a>.
+  </div>
+</div>
+
+<script>
+  // The /exec URL of the Apps Script deployment - the same one the
+  // facilitator page uses. Keep it in step with API_URL in index.html.
+  const API_URL = 'https://script.google.com/macros/s/AKfycbzheOIYb7BM8bVNinTpwLvedpYSZOBMKICaxkBG7jCdzGPVsYLw9XGRF26LHwoOiOBL7g/exec';
+
+  const TALK_ID = (new URLSearchParams(window.location.search).get('talk') || '').trim();
+  const $ = id => document.getElementById(id);
+  let TALK = null;
+
+  // Every call goes out with no cookies, so whichever Google accounts
+  // the browser is signed into never come into it.
+  function api(method, payload) {
+    let url = API_URL;
+    const opts = { method: method, credentials: 'omit', redirect: 'follow', cache: 'no-store' };
+    if (method === 'GET') {
+      url += '?action=rsvp&talk=' + encodeURIComponent(TALK_ID) + '&_=' + Date.now();
+    } else {
+      // text/plain keeps this a simple request the script can answer.
+      opts.headers = { 'Content-Type': 'text/plain;charset=utf-8' };
+      opts.body = JSON.stringify(payload);
+    }
+    return fetch(url, opts).then(r => {
+      if (!r.ok) throw new Error('the server returned ' + r.status);
+      return r.json();
+    });
+  }
+
+  function setText(id, text) { const el = $(id); el.textContent = text || ''; el.classList.toggle('hidden', !text); }
+
+  function fill(listEl, items, emptyText) {
+    listEl.innerHTML = '';
+    if (!items.length) {
+      if (!emptyText) return;
+      const li = document.createElement('li'); li.className = 'empty'; li.textContent = emptyText;
+      listEl.appendChild(li); return;
+    }
+    items.forEach(t => { const li = document.createElement('li'); li.textContent = t; listEl.appendChild(li); });
+  }
+
+  function renderWall(w) {
+    $('count').textContent = w.count;
+    const noun = w.count === 1 ? 'parent attending' : 'parents attending';
+    $('countLabel').textContent = w.names.length ? noun + ', including:' : noun;
+    fill($('names'), w.names, w.count ? '' : 'Be the first to RSVP!');
+    fill($('topicList'), w.topics, 'No topics yet.');
+    renderCloud(w.topics);
+  }
+
+  function renderPage(d) {
+    if (!d || d.ok !== 'true') {
+      $('ename').textContent = (d && d.error) || 'Could not load this Parent Talk. Please try again.';
+      ['formCard', 'cta'].forEach(id => $(id).classList.add('hidden'));
+      return;
+    }
+    const t = d.talk;
+    TALK = t;
+    document.title = 'RSVP for the ' + t.name + ' | NYC-Parents in Action';
+    $('title').textContent = 'RSVP for the ' + t.name;
+    $('ename').textContent = t.name;
+    setText('eschool', t.school);
+    setText('edate', t.date);
+    setText('etime', t.time);
+    setText('eloc', t.location);
+    setText('erefresh', t.refreshments);
+    setText('directions', t.directions);
+
+    const desc = $('desc'); desc.innerHTML = '';
+    t.description.split(/\n\s*\n|\r?\n/).map(s => s.trim()).filter(Boolean).forEach(s => {
+      const p = document.createElement('p'); p.textContent = s; desc.appendChild(p);
+    });
+
+    if (t.calStart) {
+      const g = 'https://calendar.google.com/calendar/render?action=TEMPLATE' +
+        '&text=' + encodeURIComponent(t.name + (t.school ? ' (' + t.school + ')' : '')) +
+        '&dates=' + t.calStart + '/' + t.calEnd +
+        '&location=' + encodeURIComponent(t.location) +
+        '&details=' + encodeURIComponent('NYC-Parents in Action Parent Talk. ' + t.description);
+      $('gcal').href = g;
+      $('cal').classList.remove('hidden');
+    }
+
+    if (t.open !== 'true') {
+      $('cta').classList.add('hidden');
+      $('formCard').innerHTML = '';
+      const d = document.createElement('div'); d.className = 'empty';
+      d.textContent = t.closedReason || 'RSVPs for this Parent Talk are closed.';
+      $('formCard').appendChild(d);
+    }
+    renderWall(d.wall);
+  }
+
+  // Common words left out of the cloud. Add or remove words here as needed.
+  const STOP = new Set(('a an and are as at be but by can do does for from has have how i if in into is it its ' +
+    'me my of on or our so than that the their them then there these they this to too us was we what when ' +
+    'where which who why will with would you your about also any some more most other such just like get ' +
+    'deal dealing handle handling help want talk discuss know way ways should could around much many very ' +
+    'kid kids child children son sons daughter daughters parent parents parenting').split(' '));
+
+  function renderCloud(topics) {
+    const cloud = $('cloud');
+    cloud.innerHTML = '';
+    $('allTopics').classList.toggle('hidden', !topics.length);
+    const counts = {};
+    topics.forEach(t => {
+      const seen = new Set(); // a word counts once per submission
+      t.toLowerCase().replace(/[’]/g, "'").split(/[^a-z0-9'\-]+/).forEach(raw => {
+        const w = raw.replace(/^['\-]+|['\-]+$/g, '').replace(/'s$/, '');
+        if (w.length < 3 || STOP.has(w) || /^\d+$/.test(w) || seen.has(w)) return;
+        seen.add(w);
+        counts[w] = (counts[w] || 0) + 1;
+      });
+    });
+    let words = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 40);
+    if (!words.length) {
+      const s = document.createElement('div'); s.className = 'empty'; s.textContent = 'No topics yet.';
+      cloud.appendChild(s); return;
+    }
+    const max = counts[words[0]], min = counts[words[words.length - 1]];
+    for (let i = words.length - 1; i > 0; i--) {           // mix big and small words
+      const j = Math.floor(Math.random() * (i + 1)); [words[i], words[j]] = [words[j], words[i]];
+    }
+    words.forEach((w, i) => {
+      const s = document.createElement('span');
+      const scale = max === min ? 0.5 : (counts[w] - min) / (max - min);
+      s.style.fontSize = Math.round(15 + scale * 27) + 'px';
+      s.className = 'c' + ((i % 5) + 1);
+      s.title = counts[w] + (counts[w] === 1 ? ' mention' : ' mentions');
+      s.textContent = w;
+      cloud.appendChild(s);
+    });
+  }
+
+  function radio(name) { return document.querySelector('input[name="' + name + '"]:checked').value; }
+
+  $('f').addEventListener('submit', e => {
+    e.preventDefault();
+    const msg = $('msg'); msg.className = 'msg'; msg.textContent = '';
+    const payload = {
+      talkId: TALK_ID, first: $('first').value, last: $('last').value, email: $('email').value,
+      show: radio('show'), mailing: radio('mailing'), wall: radio('wall'), topics: $('topics').value
+    };
+    if (!payload.first.trim() || !payload.last.trim() || !payload.email.trim()) {
+      msg.className = 'msg err'; msg.textContent = 'Please enter your first name, last name, and email.'; return;
+    }
+    $('btn').disabled = true; $('btn').textContent = 'Submitting…';
+    payload.action = 'rsvp';
+    const done = () => { $('btn').disabled = false; $('btn').textContent = 'Submit RSVP'; };
+    api('POST', payload)
+      .then(res => {
+        done();
+        if (!res || res.ok !== 'true') {
+          msg.className = 'msg err';
+          msg.textContent = (res && res.error) || 'Something went wrong. Please try again.';
+          return;
+        }
+        renderWall(res.wall);
+        $('f').reset();
+        msg.className = 'msg ok'; msg.textContent = 'Thank you! You\'re on the list.';
+      })
+      .catch(err => {
+        done();
+        msg.className = 'msg err';
+        msg.textContent = 'Could not send your RSVP (' + err.message + '). Please try again.';
+      });
+  });
+
+  // The .ics is built here in the browser - no second trip to the script.
+  function icsText(t) {
+    const esc = s => String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\;')
+      .replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+    const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    return [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//NYC-Parents in Action//Parent Talk RSVP//EN',
+      'METHOD:PUBLISH', 'BEGIN:VEVENT',
+      'UID:rsvp-' + t.id + '@parentsinaction.org',
+      'DTSTAMP:' + stamp,
+      'DTSTART:' + t.calStart,
+      'DTEND:' + t.calEnd,
+      'SUMMARY:' + esc(t.name + (t.school ? ' (' + t.school + ')' : '')),
+      'LOCATION:' + esc(t.location),
+      'DESCRIPTION:' + esc('NYC-Parents in Action Parent Talk. ' + t.description),
+      'END:VEVENT', 'END:VCALENDAR'
+    ].join('\r\n');
+  }
+
+  $('ics').addEventListener('click', e => {
+    e.preventDefault();
+    if (!TALK || !TALK.calStart) return;
+    const blob = new Blob([icsText(TALK)], { type: 'text/calendar;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'Parent-Talk.ics';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  });
+
+  if (!TALK_ID) {
+    renderPage({ ok: 'false', error: 'This link is missing its Parent Talk. Please use the link you were sent.' });
+  } else {
+    api('GET')
+      .then(renderPage)
+      .catch(() => renderPage({ ok: 'false', error: 'Could not load this Parent Talk. Please try again.' }));
+  }
+</script>
+</body>
+</html>
