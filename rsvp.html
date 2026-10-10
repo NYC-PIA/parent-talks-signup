@@ -22,7 +22,7 @@
     .cal { margin-top:12px; display:flex; flex-wrap:wrap; gap:10px; font-size:14px; }
     .cal a { color:var(--accent); font-weight:600; text-decoration:none; border:1px solid #b9d0e3;
              border-radius:6px; padding:6px 10px; background:#fff; }
-    .directions { font-size:14px; color:var(--muted); }
+    #desc a { color:var(--accent); word-break:break-word; }
     .cta { font-weight:700; margin:4px 0 14px; }
     h2 { font-size:17px; margin:0 0 12px; }
     label.q { display:block; font-weight:600; margin:16px 0 6px; }
@@ -73,7 +73,6 @@
     <div class="eline" id="edate"></div>
     <div class="eline" id="etime"></div>
     <div class="eline" id="eloc"></div>
-    <div class="note" id="erefresh"></div>
     <div class="cal hidden" id="cal">
       <a id="gcal" target="_blank" rel="noopener">+ Google Calendar</a>
       <a id="ics" href="#">+ Outlook / Apple / Yahoo (.ics)</a>
@@ -81,7 +80,6 @@
   </div>
 
   <div id="desc"></div>
-  <p class="directions" id="directions"></p>
 
   <p class="cta" id="cta">Please RSVP below.</p>
 
@@ -107,22 +105,18 @@
         <label><input type="radio" name="show" value="No"> No</label>
       </div>
 
-      <label class="q">Do you want to join the NYC-Parents in Action mailing list?</label>
-      <div class="yn">
-        <label><input type="radio" name="mailing" value="Yes"> Yes</label>
-        <label><input type="radio" name="mailing" value="No" checked> No</label>
-      </div>
-
-      <label class="q">Do you want to add any topics to the signup wall?</label>
-      <div class="yn">
-        <label><input type="radio" name="wall" value="Yes" checked> Yes</label>
-        <label><input type="radio" name="wall" value="No"> No</label>
-      </div>
-      <div class="hint">Topics on the wall are shown without your name.</div>
-
       <label class="q" for="topics">What topics do you want to bring to the meeting?</label>
+      <div class="hint" style="margin:0 0 6px">Anything you list here appears in the topics word cloud on this
+        page, without your name.</div>
       <textarea id="topics" maxlength="1000"></textarea>
 
+      <label class="q">Do you want to join the NYC-Parents in Action mailing list?</label>
+      <div class="hint">Hear about parent education events and resources for families from
+        NYC-Parents in Action. We never share your email, and you can unsubscribe anytime.</div>
+      <div class="yn">
+        <label><input type="radio" name="mailing" value="Yes" checked> Yes</label>
+        <label><input type="radio" name="mailing" value="No"> No</label>
+      </div>
       <button type="submit" id="btn">Submit RSVP</button>
       <div class="msg" id="msg"></div>
     </form>
@@ -213,13 +207,7 @@
     setText('edate', t.date);
     setText('etime', t.time);
     setText('eloc', t.location);
-    setText('erefresh', t.refreshments);
-    setText('directions', t.directions);
-
-    const desc = $('desc'); desc.innerHTML = '';
-    t.description.split(/\n\s*\n|\r?\n/).map(s => s.trim()).filter(Boolean).forEach(s => {
-      const p = document.createElement('p'); p.textContent = s; desc.appendChild(p);
-    });
+    renderDescription(t.description);
 
     if (t.calStart) {
       const g = 'https://calendar.google.com/calendar/render?action=TEMPLATE' +
@@ -239,6 +227,33 @@
       $('formCard').appendChild(d);
     }
     renderWall(d.wall);
+  }
+
+  // The calendar Description, as typed: a blank line starts a new
+  // paragraph, a single line break stays a line break, and web
+  // addresses become links. Built from text nodes, never raw HTML.
+  function renderDescription(text) {
+    const desc = $('desc'); desc.innerHTML = '';
+    String(text || '').split(/\n\s*\n/).forEach(block => {
+      if (!block.trim()) return;
+      const p = document.createElement('p');
+      block.split('\n').forEach((line, i) => {
+        if (i) p.appendChild(document.createElement('br'));
+        line.split(/(https?:\/\/[^\s<>"]+)/).forEach((part, j) => {
+          if (!part) return;
+          if (j % 2) {
+            const url = part.replace(/[.,;:!?)]+$/, '');
+            const a = document.createElement('a');
+            a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = url;
+            p.appendChild(a);
+            if (url.length < part.length) p.appendChild(document.createTextNode(part.slice(url.length)));
+          } else {
+            p.appendChild(document.createTextNode(part));
+          }
+        });
+      });
+      desc.appendChild(p);
+    });
   }
 
   // Common words left out of the cloud. Add or remove words here as needed.
@@ -289,7 +304,7 @@
     const msg = $('msg'); msg.className = 'msg'; msg.textContent = '';
     const payload = {
       talkId: TALK_ID, first: $('first').value, last: $('last').value, email: $('email').value,
-      show: radio('show'), mailing: radio('mailing'), wall: radio('wall'), topics: $('topics').value
+      show: radio('show'), mailing: radio('mailing'), wall: 'Yes', topics: $('topics').value
     };
     if (!payload.first.trim() || !payload.last.trim() || !payload.email.trim()) {
       msg.className = 'msg err'; msg.textContent = 'Please enter your first name, last name, and email.'; return;
