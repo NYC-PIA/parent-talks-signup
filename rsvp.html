@@ -194,9 +194,8 @@
     fill($('names'), w.names, w.count ? '' : 'Be the first to RSVP!');
     fill($('topicList'), w.topics, 'No topics yet.');
     renderCloud(w.topics);
-    // Topics off: the existing cloud stays up, but an empty one is hidden
-    // rather than inviting topics the form no longer asks for.
-    $('topicsCard').classList.toggle('hidden', !TOPICS_ON && !w.topics.length);
+    // Topics off: the whole topics section - word cloud and list - is hidden.
+    $('topicsCard').classList.toggle('hidden', !TOPICS_ON);
   }
 
   function renderPage(d) {
