@@ -105,10 +105,13 @@
         <label><input type="radio" name="show" value="No"> No</label>
       </div>
 
-      <label class="q" for="topics">What topics do you want to bring to the meeting?</label>
-      <div class="hint" style="margin:0 0 6px">Anything you list here appears in the topics word cloud on this
-        page, without your name.</div>
-      <textarea id="topics" maxlength="1000"></textarea>
+      <!-- Hidden when topic collection is turned off (Parent Talks > Utilities). -->
+      <div id="topicsBlock">
+        <label class="q" for="topics">What topics do you want to bring to the meeting?</label>
+        <div class="hint" style="margin:0 0 6px">Anything you list here appears in the topics word cloud on this
+          page, without your name.</div>
+        <textarea id="topics" maxlength="1000"></textarea>
+      </div>
 
       <label class="q">Do you want to join the NYC-Parents in Action mailing list?</label>
       <div class="hint">Hear about parent education events and resources for families from
@@ -128,7 +131,7 @@
     <ul class="names" id="names"></ul>
   </div>
 
-  <div class="card">
+  <div class="card" id="topicsCard">
     <h2>Topics parents want to raise</h2>
     <div class="cloud" id="cloud"></div>
     <details id="allTopics" class="hidden">
@@ -152,6 +155,7 @@
   const TALK_ID = (new URLSearchParams(window.location.search).get('talk') || '').trim();
   const $ = id => document.getElementById(id);
   let TALK = null;
+  let TOPICS_ON = true;
 
   // Every call goes out with no cookies, so whichever Google accounts
   // the browser is signed into never come into it.
@@ -190,6 +194,9 @@
     fill($('names'), w.names, w.count ? '' : 'Be the first to RSVP!');
     fill($('topicList'), w.topics, 'No topics yet.');
     renderCloud(w.topics);
+    // Topics off: the existing cloud stays up, but an empty one is hidden
+    // rather than inviting topics the form no longer asks for.
+    $('topicsCard').classList.toggle('hidden', !TOPICS_ON && !w.topics.length);
   }
 
   function renderPage(d) {
@@ -200,6 +207,10 @@
     }
     const t = d.talk;
     TALK = t;
+    TOPICS_ON = d.topicsOn !== 'false';
+    const tb = $('topicsBlock');
+    if (tb) tb.classList.toggle('hidden', !TOPICS_ON);
+
     document.title = 'RSVP for the ' + t.name + ' | NYC-Parents in Action';
     $('title').textContent = 'RSVP for the ' + t.name;
     $('ename').textContent = t.name;
@@ -304,7 +315,8 @@
     const msg = $('msg'); msg.className = 'msg'; msg.textContent = '';
     const payload = {
       talkId: TALK_ID, first: $('first').value, last: $('last').value, email: $('email').value,
-      show: radio('show'), mailing: radio('mailing'), wall: 'Yes', topics: $('topics').value
+      show: radio('show'), mailing: radio('mailing'),
+      wall: TOPICS_ON ? 'Yes' : 'No', topics: TOPICS_ON ? $('topics').value : ''
     };
     if (!payload.first.trim() || !payload.last.trim() || !payload.email.trim()) {
       msg.className = 'msg err'; msg.textContent = 'Please enter your first name, last name, and email.'; return;
