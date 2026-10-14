@@ -56,6 +56,16 @@
   table.open th:nth-child(7), table.open td:nth-child(7) { text-align: left; }
   table.open td:nth-child(6) { white-space: normal; min-width: 160px; font-style: italic; }
   .confirmbar { margin-top: 12px; display: flex; align-items: center; gap: 12px; }
+  .picker { border: 1px solid #dadce0; border-radius: 6px; padding: 16px; max-width: 420px; }
+  .picker label { display: block; font-weight: bold; margin: 12px 0 6px; }
+  .picker label:first-child { margin-top: 0; }
+  .picker select, .picker input { width: 100%; box-sizing: border-box; padding: 9px 10px;
+                                  font-size: 16px; border: 1px solid #c0c0c0; border-radius: 4px;
+                                  background: #fff; }
+  .picker button { margin-top: 14px; }
+  .picker .perr { color: #b00020; margin-top: 10px; }
+  .notyou { font-size: 13px; margin: 0 0 6px; }
+  .notyou a { color: #1a73e8; }
 
   /* Phones (narrower than 600px): each open talk becomes a stacked card,
      checkbox on the left, grade on top, then date, day, time and location. */
@@ -95,6 +105,16 @@
   <div id="msg"></div>
   <p id="loading" class="loading">Loading...</p>
 
+  <form id="picker" class="picker" style="display:none;" novalidate>
+    <label for="pickName">Select your name</label>
+    <select id="pickName"><option value="">Loading names...</option></select>
+    <label for="pickEmail">Your email address</label>
+    <input type="email" id="pickEmail" autocomplete="email" maxlength="200">
+    <button type="submit" class="primary" id="pickBtn">Continue</button>
+    <div class="perr" id="pickErr"></div>
+  </form>
+  <p class="notyou" id="notYou" style="display:none;">Not you? <a href="#" id="switchUser">Choose a different name</a></p>
+
   <div id="main" style="display:none;">
 
     <h2>Open for signup</h2>
@@ -122,7 +142,14 @@
     return h ? h.trim() : '';
   }
 
-  var TOKEN = readToken();
+  // A personal link carries ?t=. The general link has none, so the
+  // facilitator picks their name, and the token they are given is kept
+  // in this browser for next time.
+  var URL_TOKEN = readToken();
+  var SAVED_KEY = 'pt-signup:me';
+  function savedToken() { try { return localStorage.getItem(SAVED_KEY) || ''; } catch (e) { return ''; } }
+  function saveToken(t) { try { if (t) localStorage.setItem(SAVED_KEY, t); else localStorage.removeItem(SAVED_KEY); } catch (e) {} }
+  var TOKEN = URL_TOKEN || savedToken();
   var RELEASE_CONTACT = 'NYC-Parents in Action';
   var busy = false;
 
@@ -183,19 +210,19 @@
   // The last page this link saw is kept in this browser, so a return
   // visit shows it at once while the fresh copy loads. Buttons stay
   // off until the fresh copy arrives, so nobody acts on old data.
-  var CACHE_KEY = 'pt-signup:' + TOKEN;
+  function cacheKey() { return 'pt-signup:' + TOKEN; }
 
   function readCache() {
     try {
-      var s = localStorage.getItem(CACHE_KEY);
+      var s = localStorage.getItem(cacheKey());
       return s ? JSON.parse(s) : null;
     } catch (e) { return null; }
   }
 
   function saveCache(d) {
     try {
-      if (d && d.ok === 'true') localStorage.setItem(CACHE_KEY, JSON.stringify(d));
-      else localStorage.removeItem(CACHE_KEY);
+      if (d && d.ok === 'true') localStorage.setItem(cacheKey(), JSON.stringify(d));
+      else localStorage.removeItem(cacheKey());
     } catch (e) {}
   }
 
@@ -235,6 +262,8 @@
 
     if (!d || d.ok !== 'true') {
       document.getElementById('main').style.display = 'none';
+      // A saved choice from the general link that no longer works: ask again.
+      if (!URL_TOKEN && d && d.error === 'unknown link') { saveToken(''); TOKEN = ''; showPicker(); return; }
       if (d && d.error === 'unknown link') show(UNKNOWN_LINK, false);
       else show('Could not load: ' + ((d && d.error) || 'unknown error'), false);
       return;
@@ -242,6 +271,8 @@
 
     document.getElementById('hello').textContent = 'Hello, ' + d.name + '.';
     document.getElementById('main').style.display = 'block';
+    document.getElementById('picker').style.display = 'none';
+    document.getElementById('notYou').style.display = URL_TOKEN ? 'none' : 'block';
 
     var mineEl = document.getElementById('mine');
     if (!d.mine.length) {
@@ -391,13 +422,64 @@
     updatePicked();
   });
 
+  // ---- General link: pick your name ----
+  function showPicker() {
+    doneLoading();
+    clearMsg();
+    document.getElementById('main').style.display = 'none';
+    document.getElementById('notYou').style.display = 'none';
+    document.getElementById('hello').textContent = '';
+    document.getElementById('picker').style.display = 'block';
+    var sel = document.getElementById('pickName');
+    fetch(API_URL + (API_URL.indexOf('?') === -1 ? '?' : '&') + 'action=names&_=' + Date.now(),
+          { credentials: 'omit', redirect: 'follow', cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('the server returned ' + r.status); return r.json(); })
+      .then(function (d) {
+        if (!d || d.ok !== 'true') throw new Error((d && d.error) || 'unknown error');
+        if (d.title) { document.getElementById('title').textContent = d.title; document.title = d.title; }
+        if (d.releaseContact) RELEASE_CONTACT = d.releaseContact;
+        sel.innerHTML = '<option value="">Choose your name...</option>' +
+          d.names.map(function (n) { return '<option>' + esc(n) + '</option>'; }).join('');
+      })
+      .catch(function (e) { sel.innerHTML = '<option value="">Could not load names</option>';
+                            show('Could not load: ' + e.message, false); });
+  }
+
+  document.getElementById('picker').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var name = document.getElementById('pickName').value;
+    var email = document.getElementById('pickEmail').value.trim();
+    var err = document.getElementById('pickErr');
+    var btn = document.getElementById('pickBtn');
+    err.textContent = '';
+    if (!name || !email) { err.textContent = 'Please choose your name and enter your email.'; return; }
+    btn.disabled = true; btn.textContent = 'Checking...';
+    api('POST', { action: 'identify', name: name, email: email })
+      .then(function (r) {
+        btn.disabled = false; btn.textContent = 'Continue';
+        if (!r || r.ok !== 'true') { err.textContent = (r && r.error) || 'Something went wrong.'; return; }
+        TOKEN = r.t;
+        saveToken(TOKEN);
+        if (r.page) { saveCache(r.page); render(r.page); } else load();
+      })
+      .catch(function (e) { btn.disabled = false; btn.textContent = 'Continue';
+                            err.textContent = 'Failed: ' + e.message; });
+  });
+
+  document.getElementById('switchUser').addEventListener('click', function (ev) {
+    ev.preventDefault();
+    try { localStorage.removeItem(cacheKey()); } catch (e) {}
+    saveToken(''); TOKEN = '';
+    document.getElementById('pickEmail').value = '';
+    showPicker();
+  });
+
   if (TOKEN) {
     var cached = readCache();
     if (cached) { render(cached); showChecking(); }
     load();
   } else {
-    doneLoading();
-    show(UNKNOWN_LINK, false);
+    showPicker();
   }
 </script>
 </body>
