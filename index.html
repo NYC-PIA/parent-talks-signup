@@ -62,10 +62,6 @@
   .picker select, .picker input { width: 100%; box-sizing: border-box; padding: 9px 10px;
                                   font-size: 16px; border: 1px solid #c0c0c0; border-radius: 4px;
                                   background: #fff; }
-  .picker button { margin-top: 14px; }
-  .picker .perr { color: #b00020; margin-top: 10px; }
-  .notyou { font-size: 13px; margin: 0 0 6px; }
-  .notyou a { color: #1a73e8; }
 
   /* Phones (narrower than 600px): each open talk becomes a stacked card,
      checkbox on the left, grade on top, then date, day, time and location. */
@@ -105,24 +101,23 @@
   <div id="msg"></div>
   <p id="loading" class="loading">Loading...</p>
 
-  <form id="picker" class="picker" style="display:none;" novalidate>
-    <label for="pickName">Select your name</label>
-    <select id="pickName"><option value="">Loading names...</option></select>
-    <label for="pickEmail">Your email address</label>
-    <input type="email" id="pickEmail" autocomplete="email" maxlength="200">
-    <button type="submit" class="primary" id="pickBtn">Continue</button>
-    <div class="perr" id="pickErr"></div>
-  </form>
-  <p class="notyou" id="notYou" style="display:none;">Not you? <a href="#" id="switchUser">Choose a different name</a></p>
-
   <div id="main" style="display:none;">
+
+    <div id="picker" class="picker" style="display:none;">
+      <label for="pickName">Select your name</label>
+      <select id="pickName"><option value="">Loading names...</option></select>
+      <label for="pickEmail">Your email address</label>
+      <input type="email" id="pickEmail" autocomplete="email" maxlength="200">
+    </div>
 
     <h2>Open for signup</h2>
     <p class="intro" id="intro"></p>
     <div id="open"></div>
 
-    <h2>My talks</h2>
-    <div id="mine"></div>
+    <div id="mineSection">
+      <h2>My talks</h2>
+      <div id="mine"></div>
+    </div>
   </div>
 </div>
 
@@ -142,14 +137,11 @@
     return h ? h.trim() : '';
   }
 
-  // A personal link carries ?t=. The general link has none, so the
-  // facilitator picks their name, and the token they are given is kept
-  // in this browser for next time.
-  var URL_TOKEN = readToken();
-  var SAVED_KEY = 'pt-signup:me';
-  function savedToken() { try { return localStorage.getItem(SAVED_KEY) || ''; } catch (e) { return ''; } }
-  function saveToken(t) { try { if (t) localStorage.setItem(SAVED_KEY, t); else localStorage.removeItem(SAVED_KEY); } catch (e) {} }
-  var TOKEN = URL_TOKEN || savedToken();
+  // A personal link carries ?t= and shows "My talks". The general link
+  // has none: it shows only the open talks, and the facilitator picks
+  // their name and enters their email to sign up.
+  var TOKEN = readToken();
+  var GENERAL = !TOKEN;
   var RELEASE_CONTACT = 'NYC-Parents in Action';
   var busy = false;
 
@@ -262,8 +254,6 @@
 
     if (!d || d.ok !== 'true') {
       document.getElementById('main').style.display = 'none';
-      // A saved choice from the general link that no longer works: ask again.
-      if (!URL_TOKEN && d && d.error === 'unknown link') { saveToken(''); TOKEN = ''; showPicker(); return; }
       if (d && d.error === 'unknown link') show(UNKNOWN_LINK, false);
       else show('Could not load: ' + ((d && d.error) || 'unknown error'), false);
       return;
@@ -271,8 +261,6 @@
 
     document.getElementById('hello').textContent = 'Hello, ' + d.name + '.';
     document.getElementById('main').style.display = 'block';
-    document.getElementById('picker').style.display = 'none';
-    document.getElementById('notYou').style.display = URL_TOKEN ? 'none' : 'block';
 
     var mineEl = document.getElementById('mine');
     if (!d.mine.length) {
@@ -313,8 +301,12 @@
       }).join('');
     }
 
+    renderOpen(d.open);
+  }
+
+  function renderOpen(list) {
     var openEl = document.getElementById('open');
-    if (!d.open.length) {
+    if (!list.length) {
       openEl.innerHTML = '<p class="empty">Nothing is open for signup right now. ' +
                          'Thank you - check back another time.</p>';
     } else {
@@ -322,7 +314,7 @@
         '<div class="tablewrap"><table class="open">' +
           '<thead><tr><th>Select</th><th>Date</th><th>Day</th><th>Time</th>' +
           '<th>Grade</th><th>Notes</th><th>Location</th></tr></thead><tbody>' +
-          d.open.map(function (t) {
+          list.map(function (t) {
             return '<tr data-row="' + esc(t.eventId) + '">' +
               '<td><input type="checkbox" value="' + esc(t.eventId) + '" ' +
                 'aria-label="Select ' + esc(t.label) + '"></td>' +
@@ -380,9 +372,16 @@
     if (busy) return;
     var ids = pickedIds();
     if (!ids.length) return;
+    var payload = { action: 'claimMany', t: TOKEN, eventIds: ids };
+    if (GENERAL) {
+      var nm = document.getElementById('pickName').value;
+      var em = document.getElementById('pickEmail').value.trim();
+      if (!nm || !em) { show('Please choose your name and enter your email.', false); return; }
+      payload = { action: 'claimByName', name: nm, email: em, eventIds: ids };
+    }
     clearMsg();
     setBusy(true);
-    api('POST', { action: 'claimMany', t: TOKEN, eventIds: ids })
+    api('POST', payload)
       .then(function (r) {
         setBusy(false);
         var done = parseInt(r.claimed || '0', 10);
@@ -399,7 +398,7 @@
           lines.push(r.error);
         }
         show(lines.join('\n\n'), done > 0 && !(r.errors && r.errors.length));
-        redraw(r);
+        if (GENERAL) loadGeneral(); else redraw(r);
       })
       .catch(function (e) { setBusy(false); updatePicked(); show('Failed: ' + e.message, false); });
   }
@@ -422,64 +421,36 @@
     updatePicked();
   });
 
-  // ---- General link: pick your name ----
-  function showPicker() {
-    doneLoading();
-    clearMsg();
-    document.getElementById('main').style.display = 'none';
-    document.getElementById('notYou').style.display = 'none';
-    document.getElementById('hello').textContent = '';
+  // ---- General link: open talks + name/email, no assignments ----
+  function loadGeneral() {
+    document.getElementById('mineSection').style.display = 'none';
     document.getElementById('picker').style.display = 'block';
     var sel = document.getElementById('pickName');
+    var keep = sel.value;
     fetch(API_URL + (API_URL.indexOf('?') === -1 ? '?' : '&') + 'action=names&_=' + Date.now(),
           { credentials: 'omit', redirect: 'follow', cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error('the server returned ' + r.status); return r.json(); })
       .then(function (d) {
+        doneLoading();
         if (!d || d.ok !== 'true') throw new Error((d && d.error) || 'unknown error');
         if (d.title) { document.getElementById('title').textContent = d.title; document.title = d.title; }
+        if (d.intro) document.getElementById('intro').textContent = d.intro;
         if (d.releaseContact) RELEASE_CONTACT = d.releaseContact;
         sel.innerHTML = '<option value="">Choose your name...</option>' +
           d.names.map(function (n) { return '<option>' + esc(n) + '</option>'; }).join('');
+        if (keep) sel.value = keep;
+        document.getElementById('main').style.display = 'block';
+        renderOpen(d.open || []);
       })
-      .catch(function (e) { sel.innerHTML = '<option value="">Could not load names</option>';
-                            show('Could not load: ' + e.message, false); });
+      .catch(function (e) { doneLoading(); show('Could not load: ' + e.message, false); });
   }
 
-  document.getElementById('picker').addEventListener('submit', function (ev) {
-    ev.preventDefault();
-    var name = document.getElementById('pickName').value;
-    var email = document.getElementById('pickEmail').value.trim();
-    var err = document.getElementById('pickErr');
-    var btn = document.getElementById('pickBtn');
-    err.textContent = '';
-    if (!name || !email) { err.textContent = 'Please choose your name and enter your email.'; return; }
-    btn.disabled = true; btn.textContent = 'Checking...';
-    api('POST', { action: 'identify', name: name, email: email })
-      .then(function (r) {
-        btn.disabled = false; btn.textContent = 'Continue';
-        if (!r || r.ok !== 'true') { err.textContent = (r && r.error) || 'Something went wrong.'; return; }
-        TOKEN = r.t;
-        saveToken(TOKEN);
-        if (r.page) { saveCache(r.page); render(r.page); } else load();
-      })
-      .catch(function (e) { btn.disabled = false; btn.textContent = 'Continue';
-                            err.textContent = 'Failed: ' + e.message; });
-  });
-
-  document.getElementById('switchUser').addEventListener('click', function (ev) {
-    ev.preventDefault();
-    try { localStorage.removeItem(cacheKey()); } catch (e) {}
-    saveToken(''); TOKEN = '';
-    document.getElementById('pickEmail').value = '';
-    showPicker();
-  });
-
-  if (TOKEN) {
+  if (GENERAL) {
+    loadGeneral();
+  } else {
     var cached = readCache();
     if (cached) { render(cached); showChecking(); }
     load();
-  } else {
-    showPicker();
   }
 </script>
 </body>
