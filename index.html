@@ -142,6 +142,9 @@
   // their name and enters their email to sign up.
   var TOKEN = readToken();
   var GENERAL = !TOKEN;
+  var GENERAL_WELCOME = 'Thank you for facilitating Parent Talks with NYC-PIA. Below are ' +
+    'the Talks that are open for signup. Select your name, enter your email, and choose ' +
+    'as many as you would like!';
   var RELEASE_CONTACT = 'NYC-Parents in Action';
   var busy = false;
 
@@ -423,6 +426,7 @@
 
   // ---- General link: open talks + name/email, no assignments ----
   function loadGeneral() {
+    document.getElementById('welcome').textContent = GENERAL_WELCOME;
     document.getElementById('mineSection').style.display = 'none';
     document.getElementById('picker').style.display = 'block';
     var sel = document.getElementById('pickName');
@@ -435,6 +439,7 @@
         if (!d || d.ok !== 'true') throw new Error((d && d.error) || 'unknown error');
         if (d.title) { document.getElementById('title').textContent = d.title; document.title = d.title; }
         if (d.intro) document.getElementById('intro').textContent = d.intro;
+        if (d.welcome) document.getElementById('welcome').textContent = d.welcome;
         if (d.releaseContact) RELEASE_CONTACT = d.releaseContact;
         sel.innerHTML = '<option value="">Choose your name...</option>' +
           d.names.map(function (n) { return '<option>' + esc(n) + '</option>'; }).join('');
