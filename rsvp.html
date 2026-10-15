@@ -95,14 +95,25 @@
           <input type="text" id="last" maxlength="60" autocomplete="family-name" required>
         </div>
       </div>
+      <div class="hint">Your name will be shared with your school's Parent Talk organizers.</div>
 
       <label class="q" for="email">Email address <span class="req">*</span></label>
       <input type="email" id="email" maxlength="200" autocomplete="email" required>
 
-      <label class="q">Can we add your attendance to the signup list so your fellow parents will know you plan to join?</label>
-      <div class="yn">
-        <label><input type="radio" name="show" value="Yes" checked> Yes</label>
-        <label><input type="radio" name="show" value="No"> No</label>
+      <!-- Shown only when the talk's RSVP Grades switch is On. -->
+      <div id="gradesBlock" class="hidden">
+        <label class="q" for="grades">Your child's grade(s)</label>
+        <input type="text" id="grades" maxlength="100">
+        <div class="hint">For example: 6, or K and 3</div>
+      </div>
+
+      <!-- Hidden when the talk's names list is turned off. -->
+      <div id="showBlock">
+        <label class="q">Can we add your attendance to the signup list so your fellow parents will know you plan to join?</label>
+        <div class="yn">
+          <label><input type="radio" name="show" value="Yes" checked> Yes</label>
+          <label><input type="radio" name="show" value="No"> No</label>
+        </div>
       </div>
 
       <!-- Hidden when topic collection is turned off (Parent Talks > Utilities). -->
@@ -125,9 +136,9 @@
     </form>
   </div>
 
-  <div class="card">
+  <div class="card" id="whoCard">
     <h2>Who's coming</h2>
-    <div class="countline"><span class="count" id="count">–</span> <span id="countLabel">parents attending</span></div>
+    <div class="countline" id="countLine"><span class="count" id="count">–</span> <span id="countLabel">parents attending</span></div>
     <ul class="names" id="names"></ul>
   </div>
 
@@ -156,6 +167,9 @@
   const $ = id => document.getElementById(id);
   let TALK = null;
   let TOPICS_ON = true;
+  let SHOW_NAMES = true;
+  let SHOW_COUNT = true;
+  let ASK_GRADES = false;
 
   // Every call goes out with no cookies, so whichever Google accounts
   // the browser is signed into never come into it.
@@ -188,10 +202,17 @@
   }
 
   function renderWall(w) {
-    $('count').textContent = w.count;
-    const noun = w.count === 1 ? 'parent attending' : 'parents attending';
-    $('countLabel').textContent = w.names.length ? noun + ', including:' : noun;
-    fill($('names'), w.names, w.count ? '' : 'Be the first to RSVP!');
+    // Per-talk switches: the count, the names, or the whole box.
+    $('whoCard').classList.toggle('hidden', !SHOW_NAMES && !SHOW_COUNT);
+    $('countLine').classList.toggle('hidden', !SHOW_COUNT);
+    $('names').classList.toggle('hidden', !SHOW_NAMES);
+    if (SHOW_COUNT) {
+      $('count').textContent = w.count;
+      const noun = w.count === 1 ? 'parent attending' : 'parents attending';
+      $('countLabel').textContent = SHOW_NAMES && w.names.length ? noun + ', including:' : noun;
+    }
+    fill($('names'), SHOW_NAMES ? w.names : [],
+         SHOW_COUNT ? (w.count ? '' : 'Be the first to RSVP!') : 'No names listed yet.');
     fill($('topicList'), w.topics, 'No topics yet.');
     renderCloud(w.topics);
     // Topics off: the whole topics section - word cloud and list - is hidden.
@@ -209,6 +230,11 @@
     TOPICS_ON = d.topicsOn !== 'false';
     const tb = $('topicsBlock');
     if (tb) tb.classList.toggle('hidden', !TOPICS_ON);
+    SHOW_NAMES = d.showNames !== 'false';
+    SHOW_COUNT = d.showCount !== 'false';
+    $('showBlock').classList.toggle('hidden', !SHOW_NAMES);
+    ASK_GRADES = d.askGrades === 'true';
+    $('gradesBlock').classList.toggle('hidden', !ASK_GRADES);
 
     document.title = 'RSVP for the ' + t.name + ' | NYC-Parents in Action';
     $('title').textContent = 'RSVP for the ' + t.name;
@@ -314,7 +340,8 @@
     const msg = $('msg'); msg.className = 'msg'; msg.textContent = '';
     const payload = {
       talkId: TALK_ID, first: $('first').value, last: $('last').value, email: $('email').value,
-      show: radio('show'), mailing: radio('mailing'),
+      grades: ASK_GRADES ? $('grades').value : '',
+      show: SHOW_NAMES ? radio('show') : 'No', mailing: radio('mailing'),
       wall: TOPICS_ON ? 'Yes' : 'No', topics: TOPICS_ON ? $('topics').value : ''
     };
     if (!payload.first.trim() || !payload.last.trim() || !payload.email.trim()) {
