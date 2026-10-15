@@ -21,6 +21,8 @@
     body { margin:0; font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
            color:var(--ink); background:var(--bg); line-height:1.5; }
     .wrap { max-width:640px; margin:0 auto; padding:24px 16px 48px; }
+    .banner { display:block; width:100%; height:auto; background:#fff; border:1px solid var(--line);
+              border-radius:10px; margin:0 0 16px; }
     .org { font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); font-weight:600; }
     h1 { font-size:26px; margin:6px 0 12px; line-height:1.25; }
     .tagline { font-size:18px; font-weight:600; color:var(--accent); margin:0 0 10px; }
@@ -71,7 +73,10 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="org">NYC-Parents in Action</div>
+  <!-- Co-branded banner (both logos in one image): shown only when the
+       talk's school has a Logo in PT Schools. It replaces the text label. -->
+  <img class="banner hidden" id="banner" alt="">
+  <div class="org" id="org">NYC-Parents in Action</div>
   <h1 id="title">RSVP for the Parent Talk</h1>
 
   <p class="tagline">Thriving kids grow up in connected communities—and parents are part of that too.</p>
@@ -118,8 +123,8 @@
         <div class="hint">For example: 6, or K and 3</div>
       </div>
 
-      <!-- Hidden when the talk's names list is turned off. -->
-      <div id="showBlock">
+      <!-- Shown only when the talk's RSVP Names switch is On. -->
+      <div id="showBlock" class="hidden">
         <label class="q">Can we add your attendance to the signup list so your fellow parents will know you plan to join?</label>
         <div class="yn">
           <label><input type="radio" name="show" value="Yes" checked> Yes</label>
@@ -127,8 +132,8 @@
         </div>
       </div>
 
-      <!-- Hidden when topic collection is turned off (Parent Talks > Utilities). -->
-      <div id="topicsBlock">
+      <!-- Shown only when the talk's RSVP Topics switch is On. -->
+      <div id="topicsBlock" class="hidden">
         <label class="q" for="topics">What topics do you want to bring to the meeting?</label>
         <div class="hint" style="margin:0 0 6px">Anything you list here appears in the topics word cloud on this
           page, without your name.</div>
@@ -252,6 +257,7 @@
     $('title').textContent = 'RSVP for the ' + t.name;
     $('ename').textContent = t.name;
     setText('eschool', t.school);
+    renderLogo(t.logo, t.school);
     setText('edate', t.date);
     setText('etime', t.time);
     setText('eloc', t.location);
@@ -275,6 +281,18 @@
       $('formCard').appendChild(d);
     }
     renderWall(d.wall);
+  }
+
+  // Co-branded banner from PT Schools, sent by the script as an image
+  // (data:) or a web address. Anything else is ignored; the text label stays.
+  function renderLogo(src, school) {
+    src = String(src || '');
+    if (!/^data:image\/(png|jpe?g|gif|webp|svg\+xml);base64,/i.test(src) && !/^https:\/\//i.test(src)) return;
+    const img = $('banner');
+    img.onload = () => { img.classList.remove('hidden'); $('org').classList.add('hidden'); };
+    img.onerror = () => { img.classList.add('hidden'); $('org').classList.remove('hidden'); };
+    img.alt = 'NYC-Parents in Action' + (school ? ' and ' + school : '');
+    img.src = src;
   }
 
   // The calendar Description, as typed: a blank line starts a new
