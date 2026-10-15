@@ -4,6 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Parent Talk RSVP | NYC-Parents in Action</title>
+  <!-- Logo and preview for texts, email and social links. Same icons as the facilitator page. -->
+  <link rel="icon" type="image/png" href="favicon.png?v=2">
+  <link rel="apple-touch-icon" href="https://nyc-pia.github.io/parent-talks-signup/apple-touch-icon.png?v=2">
+  <meta property="og:site_name" content="NYC-Parents in Action">
+  <meta property="og:title" content="RSVP for the Parent Talk">
+  <meta property="og:description" content="Join us for a Parent Talk with NYC-Parents in Action. Please RSVP.">
+  <meta property="og:image" content="https://nyc-pia.github.io/parent-talks-signup/apple-touch-icon.png?v=2">
+  <meta property="og:image:width" content="180">
+  <meta property="og:image:height" content="180">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
   <style>
     :root { --ink:#1f2a37; --muted:#5b6675; --accent:#1d5d8f; --line:#d9dee5; --bg:#f6f7f9; --card:#fff; --tint:#eef4f9; }
     * { box-sizing: border-box; }
@@ -136,13 +147,14 @@
     </form>
   </div>
 
-  <div class="card" id="whoCard">
+  <!-- Both boxes stay hidden until the talk loads and its switches say to show them. -->
+  <div class="card hidden" id="whoCard">
     <h2>Who's coming</h2>
     <div class="countline" id="countLine"><span class="count" id="count">–</span> <span id="countLabel">parents attending</span></div>
     <ul class="names" id="names"></ul>
   </div>
 
-  <div class="card" id="topicsCard">
+  <div class="card hidden" id="topicsCard">
     <h2>Topics parents want to raise</h2>
     <div class="cloud" id="cloud"></div>
     <details id="allTopics" class="hidden">
