@@ -111,10 +111,10 @@
           <input type="text" id="last" maxlength="60" autocomplete="family-name" required>
         </div>
       </div>
-      <div class="hint">Your name will be shared with your school's Parent Talk organizers.</div>
 
       <label class="q" for="email">Email address <span class="req">*</span></label>
       <input type="email" id="email" maxlength="200" autocomplete="email" required>
+      <div class="hint">Your name and email will be shared with your school's Parent Talk organizers.</div>
 
       <!-- Shown only when the talk's RSVP Grades switch is On. -->
       <div id="gradesBlock" class="hidden">
@@ -140,13 +140,6 @@
         <textarea id="topics" maxlength="1000"></textarea>
       </div>
 
-      <label class="q">Do you want to join the NYC-Parents in Action mailing list?</label>
-      <div class="hint">Hear about parent education events and resources for families from
-        NYC-Parents in Action. We never share your email, and you can unsubscribe anytime.</div>
-      <div class="yn">
-        <label><input type="radio" name="mailing" value="Yes" checked> Yes</label>
-        <label><input type="radio" name="mailing" value="No"> No</label>
-      </div>
       <button type="submit" id="btn">Submit RSVP</button>
       <div class="msg" id="msg"></div>
     </form>
@@ -371,7 +364,7 @@
     const payload = {
       talkId: TALK_ID, first: $('first').value, last: $('last').value, email: $('email').value,
       grades: ASK_GRADES ? $('grades').value : '',
-      show: SHOW_NAMES ? radio('show') : 'No', mailing: radio('mailing'),
+      show: SHOW_NAMES ? radio('show') : 'No', mailing: '',
       wall: TOPICS_ON ? 'Yes' : 'No', topics: TOPICS_ON ? $('topics').value : ''
     };
     if (!payload.first.trim() || !payload.last.trim() || !payload.email.trim()) {
