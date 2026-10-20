@@ -116,6 +116,9 @@
 
     <h2>Open for signup</h2>
     <p class="intro" id="intro"></p>
+    <p class="intro"><strong>Parent Talks you sign up for are not definitively yours until you hear
+      back from <span id="signupContact">Christina</span> and their status changes to
+      &ldquo;CONFIRMED&rdquo; on your dashboard.</strong></p>
     <div id="open"></div>
 
     <div id="mineSection">
@@ -249,6 +252,12 @@
     return role === 'Facilitator' ? 'Co-facilitator' : String(role || '');
   }
 
+  // First name of whoever confirms facilitators, for the signup note.
+  function setSignupContact() {
+    var el = document.getElementById('signupContact');
+    if (el && RELEASE_CONTACT) el.textContent = String(RELEASE_CONTACT).split(' ')[0];
+  }
+
   function load() {
     api('GET')
       .then(function (d) { saveCache(d); render(d); })
@@ -264,6 +273,7 @@
     if (d && d.welcome) document.getElementById('welcome').textContent = d.welcome;
     if (d && d.intro) document.getElementById('intro').textContent = d.intro;
     if (d && d.releaseContact) RELEASE_CONTACT = d.releaseContact;
+    setSignupContact();
 
     if (!d || d.ok !== 'true') {
       document.getElementById('main').style.display = 'none';
@@ -477,7 +487,7 @@
         if (d.title) { document.getElementById('title').textContent = d.title; document.title = d.title; }
         if (d.intro) document.getElementById('intro').textContent = d.intro;
         if (d.welcome) document.getElementById('welcome').textContent = d.welcome;
-        if (d.releaseContact) RELEASE_CONTACT = d.releaseContact;
+        if (d.releaseContact) { RELEASE_CONTACT = d.releaseContact; setSignupContact(); }
         sel.innerHTML = '<option value="">Choose your name...</option>' +
           d.names.map(function (n) { return '<option>' + esc(n) + '</option>'; }).join('');
         if (keep) sel.value = keep;
