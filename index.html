@@ -365,7 +365,7 @@
       openEl.innerHTML =
         '<div class="tablewrap"><table class="open">' +
           '<thead><tr><th>Select</th><th>Date</th><th>Day</th><th>Time</th>' +
-          '<th>Grade</th><th>Notes</th><th>Location</th></tr></thead><tbody>' +
+          '<th>Grade</th><th>Location</th></tr></thead><tbody>' +
           list.map(function (t) {
             return '<tr data-row="' + esc(t.eventId) + '">' +
               '<td><input type="checkbox" value="' + esc(t.eventId) + '" ' +
@@ -374,7 +374,6 @@
               '<td data-label="Day">' + esc(t.day || '') + '</td>' +
               '<td data-label="Time">' + esc(t.time || 'TBD') + '</td>' +
               '<td data-label="Grade">' + esc(t.label) + '</td>' +
-              '<td data-label="Notes">' + esc(t.notes || '') + '</td>' +
               '<td data-label="Location">' + esc(shortLoc(t.location)) + '</td>' +
             '</tr>';
           }).join('') +
