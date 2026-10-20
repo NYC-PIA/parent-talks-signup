@@ -31,6 +31,8 @@
   button:disabled { opacity: 0.5; cursor: default; }
   button:focus-visible { outline: 2px solid #1a73e8; outline-offset: 2px; }
   .mine { background: #f1f8f1; border-color: #c5e0c5; }
+  details.completed { margin-top: 16px; }
+  details.completed summary { cursor: pointer; font-weight: 600; margin-bottom: 8px; }
   .pendingcard { background: #fffbf0; border-color: #e8d9a8; }
   .tag { font-size: 11px; font-weight: bold; text-transform: uppercase;
          letter-spacing: 0.04em; padding: 2px 7px; border-radius: 10px;
@@ -241,6 +243,12 @@
     return '<div class="meta">' + label + ': ' + bits.join(' &middot; ') + '</div>';
   }
 
+  // Role names as the confirmations use them: the Facilitator role is
+  // shown as Co-facilitator, never as plain "Facilitator".
+  function roleLabel(role) {
+    return role === 'Facilitator' ? 'Co-facilitator' : String(role || '');
+  }
+
   function load() {
     api('GET')
       .then(function (d) { saveCache(d); render(d); })
@@ -268,13 +276,18 @@
     document.getElementById('main').style.display = 'block';
 
     var mineEl = document.getElementById('mine');
-    if (!d.mine.length) {
+    // A volunteered talk drops off once staffing is turned off for it.
+    var mineList = d.mine.filter(function (t) {
+      return t.confirmed === 'true' || t.staffing !== 'false';
+    });
+    var completed = d.completed || [];
+    if (!mineList.length) {
       mineEl.innerHTML = '<p class="empty">You have not put your name down for anything yet.</p>';
     } else {
-      var anyConfirmed = d.mine.some(function (t) { return t.confirmed === 'true'; });
+      var anyConfirmed = mineList.some(function (t) { return t.confirmed === 'true'; });
       mineEl.innerHTML = (anyConfirmed
         ? '<p class="mynote"><strong>Confirmed Parent Talks</strong></p>'
-        : '') + d.mine.map(function (t) {
+        : '') + mineList.map(function (t) {
         var isConfirmed = t.confirmed === 'true';
         var badge = isConfirmed
           ? '<span class="tag confirmed">Confirmed</span>'
@@ -288,9 +301,15 @@
         if (isConfirmed) {
           var partners = t.partners || [];
           var contacts = t.contacts || [];
-          people = '<div class="meta">You: ' + esc(t.roles.join(', ')) + '</div>' +
+          people = '<div class="meta">You: ' + esc(t.roles.map(roleLabel).join(', ')) + '</div>' +
             (partners.length
-              ? partners.map(function (p) { return personLine('Co-facilitator', p); }).join('')
+              ? partners.map(function (p) {
+                  // The partner's own role; an older script without it means
+                  // the partner holds whichever role you do not.
+                  var r = p.role || (t.roles.indexOf('Logistical Facilitator') !== -1
+                    ? 'Facilitator' : 'Logistical Facilitator');
+                  return personLine(roleLabel(r), p);
+                }).join('')
               : '<div class="meta">Co-facilitator: still needed</div>') +
             (contacts.length
               ? contacts.map(function (c) { return personLine('Parent Talk contact', c); }).join('')
@@ -304,6 +323,22 @@
           people +
         '</div>';
       }).join('');
+    }
+
+    // Past Parent Talks: confirmed talks already held, collapsed at the bottom.
+    if (completed.length) {
+      mineEl.innerHTML +=
+        '<details class="completed"><summary>Past Parent Talks (' +
+          completed.length + ')</summary>' +
+        completed.map(function (t) {
+          return '<div class="talk mine">' +
+            '<div class="who">' + esc(t.label) + '</div>' +
+            '<div class="when">' + esc(t.when) + '</div>' +
+            (t.roles && t.roles.length
+              ? '<div class="meta">You: ' + esc(t.roles.map(roleLabel).join(', ')) + '</div>' : '') +
+          '</div>';
+        }).join('') +
+        '</details>';
     }
 
     renderOpen(d.open);
