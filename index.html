@@ -200,10 +200,31 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // Shortens an address for display: drops the country, the ZIP code and
+  // Shortens an address for display: drops the room, the country, the ZIP code and
   // "New York, NY", but keeps any other town, e.g. "Bronx, NY" or "Riverdale, NY".
+  function stripRoom(loc) {
+    // Drops the room after the last " - " when it names a room (Room 221,
+    // T-306, Library...) or when what comes before it is a full address.
+    //   "At School - 100 East End Avenue New York, NY 10028 - LLDR"
+    //     -> "At School - 100 East End Avenue New York, NY 10028"
+    var s = String(loc == null ? '' : loc).trim();
+    var re = /\s[-–—]\s/g, m, last = -1;
+    while ((m = re.exec(s)) !== null) last = m.index;
+    if (last <= 0) return s;
+    var tail = s.substring(last).replace(/^\s*[-–—]\s*/, '').trim();
+    var head = s.substring(0, last).trim();
+    var bare = head.replace(/^\s*at\s+(the\s+)?school\s*[-–—:]\s*/i, '').trim();
+    var namesRoom = /\b(room|rm|suite|ste|library|hall|gym|gymnasium|auditorium|cafeteria|commons|lounge|chapel|theat(er|re)|center|floor)\b/i.test(tail) ||
+                    /^[A-Za-z]{0,2}-?\d{1,4}[A-Za-z]?$/.test(tail);
+    var headIsAddress = /,|\b\d{5}(-\d{4})?\s*$|^(.*\s[-–]\s)?\d+[A-Za-z]?\s+[A-Za-z]/.test(bare);
+    var tailIsAddress = /^\d+[A-Za-z]?\s+[A-Za-z]/.test(tail);
+    if (!tail || tail.indexOf(',') !== -1 || tail.length > 40 ||
+        !(namesRoom || (headIsAddress && !tailIsAddress))) return s;
+    return head;
+  }
+
   function shortLoc(s) {
-    return String(s == null ? '' : s)
+    return stripRoom(s)
       .replace(/[,\s]*\b(USA|U\.S\.A\.|United States( of America)?)\b\.?/gi, '')
       .replace(/\b(NY|N\.Y\.|New York)\b[,\s]*\d{5}(-\d{4})?\b/gi, '$1')
       .replace(/[,\s]+\d{5}(-\d{4})?\s*$/, '')
