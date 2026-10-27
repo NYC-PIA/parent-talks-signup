@@ -16,6 +16,7 @@
   .hello { font-size: 17px; font-weight: bold; margin: 0 0 6px; }
   .hello:empty { display: none; }
   .intro { color: #5f6368; font-size: 14px; margin: 0 0 12px; }
+  #intro, #welcome, #myIntro, .note { white-space: pre-line; }
   h2 { font-size: 16px; margin: 28px 0 10px; padding-bottom: 6px;
        border-bottom: 1px solid #e0e0e0; }
   .talk { border: 1px solid #dadce0; border-radius: 6px; padding: 12px 14px;
@@ -112,7 +113,7 @@
       <input type="email" id="pickEmail" autocomplete="email" maxlength="200">
     </div>
 
-    <h2>Open for signup</h2>
+    <h2 id="openHeading">Open for signup</h2>
     <p class="intro" id="intro"></p>
     <p class="intro" id="generalNote" style="display:none;">Thanks for volunteering!
       <span id="generalContact">Christina</span> will finalize facilitator assignments and be in
@@ -120,8 +121,8 @@
     <div id="open"></div>
 
     <div id="mineSection">
-      <h2>My talks</h2>
-      <p class="intro">Thank you for signing up! Talks you select will appear as
+      <h2 id="myHeading">My talks</h2>
+      <p class="intro" id="myIntro">Thank you for signing up! Talks you select will appear as
         <strong>Volunteered</strong> until <span id="signupContact">Christina</span> finalizes
         facilitator assignments. If you&rsquo;re assigned, the status will change to
         <strong>Confirmed</strong>. If you&rsquo;re not assigned this time, the talk will simply
@@ -284,6 +285,41 @@
     if (g && RELEASE_CONTACT) g.textContent = String(RELEASE_CONTACT);
   }
 
+  // Page wording. Each piece comes from its own box on the Facilitators
+  // tab (sent with the data as d.wording); a blank box shows nothing.
+  // These are only what shows before the first answer arrives.
+  var W = {
+    noTalksYet: 'You have not put your name down for anything yet.',
+    confirmedHeading: 'Confirmed Parent Talks',
+    volunteeredNote: 'Thanks for volunteering! Christina Miles will finalize facilitator ' +
+                     'assignments and be in touch. Please hold the date until your assignment is confirmed.',
+    nothingOpen: 'Nothing is open for signup right now. Thank you - check back another time.',
+    pastHeading: 'Past Parent Talks'
+  };
+
+  function setText(id, text) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = String(text || '');
+    el.style.display = text ? '' : 'none';
+  }
+
+  function applyWording(w) {
+    if (!w) return;
+    Object.keys(w).forEach(function (k) { W[k] = String(w[k] == null ? '' : w[k]); });
+    setText('openHeading', W.openHeading);
+    setText('myHeading', W.myHeading);
+    setText('myIntro', W.myMessage);
+  }
+
+  // The message under "Open for signup": exactly what is in the box on
+  // the Facilitators tab, on every link. A blank box shows nothing.
+  function setIntro(text) {
+    var el = document.getElementById('intro');
+    el.textContent = String(text || '');
+    el.style.display = text ? '' : 'none';
+  }
+
   function load() {
     api('GET')
       .then(function (d) { saveCache(d); render(d); })
@@ -292,12 +328,16 @@
 
   function render(d) {
     doneLoading();
-    if (d && d.title) {
-      document.getElementById('title').textContent = d.title;
-      document.title = d.title;
+    if (d && d.wording) {
+      applyWording(d.wording);
+      setText('title', d.title);
+      document.title = d.title || 'Parent Talks';
+      setText('welcome', d.welcome);
+    } else {
+      if (d && d.title) { document.getElementById('title').textContent = d.title; document.title = d.title; }
+      if (d && d.welcome) document.getElementById('welcome').textContent = d.welcome;
     }
-    if (d && d.welcome) document.getElementById('welcome').textContent = d.welcome;
-    if (d && d.intro) document.getElementById('intro').textContent = d.intro;
+    if (d) setIntro(d.intro);
     if (d && d.releaseContact) RELEASE_CONTACT = d.releaseContact;
     setSignupContact();
 
@@ -318,11 +358,11 @@
     });
     var completed = d.completed || [];
     if (!mineList.length) {
-      mineEl.innerHTML = '<p class="empty">You have not put your name down for anything yet.</p>';
+      mineEl.innerHTML = W.noTalksYet ? '<p class="empty">' + esc(W.noTalksYet) + '</p>' : '';
     } else {
       var anyConfirmed = mineList.some(function (t) { return t.confirmed === 'true'; });
       mineEl.innerHTML = (anyConfirmed
-        ? '<p class="mynote"><strong>Confirmed Parent Talks</strong></p>'
+        ? (W.confirmedHeading ? '<p class="mynote"><strong>' + esc(W.confirmedHeading) + '</strong></p>' : '')
         : '') + mineList.map(function (t) {
         var isConfirmed = t.confirmed === 'true';
         var badge = isConfirmed
@@ -330,9 +370,7 @@
           : '<span class="tag pending">Volunteered</span>';
         var note = isConfirmed
           ? ''
-          : 'Thanks for volunteering! ' + esc(RELEASE_CONTACT) +
-            ' will finalize facilitator assignments and be in touch. Please hold the ' +
-            'date until your assignment is confirmed.';
+          : esc(W.volunteeredNote);
         var people = '';
         if (isConfirmed) {
           var partners = t.partners || [];
@@ -355,7 +393,7 @@
           '<div class="who">' + esc(t.label) + ' ' + badge + '</div>' +
           '<div class="when">' + esc(t.when) + '</div>' +
           (t.location ? '<div class="meta">' + esc(shortLoc(t.location)) + '</div>' : '') +
-          (note ? '<div class="meta">' + note + '</div>' : '') +
+          (note ? '<div class="meta note">' + note + '</div>' : '') +
           people +
         '</div>';
       }).join('');
@@ -364,7 +402,7 @@
     // Past Parent Talks: confirmed talks already held, collapsed at the bottom.
     if (completed.length) {
       mineEl.innerHTML +=
-        '<details class="completed"><summary>Past Parent Talks (' +
+        '<details class="completed"><summary>' + (W.pastHeading ? esc(W.pastHeading) + ' ' : '') + '(' +
           completed.length + ')</summary>' +
         completed.map(function (t) {
           return '<div class="talk mine">' +
@@ -383,8 +421,7 @@
   function renderOpen(list) {
     var openEl = document.getElementById('open');
     if (!list.length) {
-      openEl.innerHTML = '<p class="empty">Nothing is open for signup right now. ' +
-                         'Thank you - check back another time.</p>';
+      openEl.innerHTML = W.nothingOpen ? '<p class="empty">' + esc(W.nothingOpen) + '</p>' : '';
     } else {
       openEl.innerHTML =
         '<div class="tablewrap"><table class="open">' +
@@ -501,7 +538,6 @@
     document.getElementById('welcome').textContent = GENERAL_WELCOME;
     document.getElementById('mineSection').style.display = 'none';
     document.getElementById('picker').style.display = 'block';
-    document.getElementById('generalNote').style.display = 'block';
     var sel = document.getElementById('pickName');
     var keep = sel.value;
     fetch(API_URL + (API_URL.indexOf('?') === -1 ? '?' : '&') + 'action=names&_=' + Date.now(),
@@ -510,9 +546,13 @@
       .then(function (d) {
         doneLoading();
         if (!d || d.ok !== 'true') throw new Error((d && d.error) || 'unknown error');
-        if (d.title) { document.getElementById('title').textContent = d.title; document.title = d.title; }
-        if (d.intro) document.getElementById('intro').textContent = d.intro;
-        if (d.welcome) document.getElementById('welcome').textContent = d.welcome;
+        if (d.wording) {
+          applyWording(d.wording);
+          setText('title', d.title);
+          document.title = d.title || 'Parent Talks';
+          setText('welcome', d.welcome);
+        }
+        setIntro(d.intro);
         if (d.releaseContact) { RELEASE_CONTACT = d.releaseContact; setSignupContact(); }
         sel.innerHTML = '<option value="">Choose your name...</option>' +
           d.names.map(function (n) { return '<option>' + esc(n) + '</option>'; }).join('');
