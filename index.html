@@ -294,7 +294,9 @@
     volunteeredNote: 'Thanks for volunteering! Christina Miles will finalize facilitator ' +
                      'assignments and be in touch. Please hold the date until your assignment is confirmed.',
     nothingOpen: 'Nothing is open for signup right now. Thank you - check back another time.',
-    pastHeading: 'Past Parent Talks'
+    pastHeading: 'Past Parent Talks',
+    signupDone: 'Thank you - your name is down for {talks}. Christina Miles confirms the ' +
+                'facilitators, so please hold the {dates} until you hear back.'
   };
 
   function setText(id, text) {
@@ -498,11 +500,14 @@
         setBusy(false);
         var done = parseInt(r.claimed || '0', 10);
         var lines = [];
-        if (done) {
-          lines.push('Thank you - your name is down for ' + done + ' talk' +
-            (done === 1 ? '' : 's') + '. ' + RELEASE_CONTACT + ' confirms the ' +
-            'facilitators, so please hold the date' + (done === 1 ? '' : 's') +
-            ' until you hear back.');
+        // Wording from the "Message after signing up" box on the
+        // Facilitators tab. {talks} -> "1 talk" / "3 talks",
+        // {dates} -> "date" / "dates". A blank box shows nothing.
+        if (done && W.signupDone) {
+          lines.push(String(W.signupDone)
+            .replace(/\{talks\}/gi, done + ' talk' + (done === 1 ? '' : 's'))
+            .replace(/\{dates\}/gi, done === 1 ? 'date' : 'dates')
+            .replace(/\{count\}/gi, String(done)));
         }
         if (r.errors && r.errors.length) {
           lines.push((done ? 'Not signed up:\n' : '') + r.errors.join('\n'));
