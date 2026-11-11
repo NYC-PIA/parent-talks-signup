@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Parent Talk RSVP | NYC-Parents in Action</title>
+  <!-- Open the connections to Google's script servers while the page loads. -->
+  <link rel="preconnect" href="https://script.google.com" crossorigin>
+  <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
   <!-- Logo and preview for texts, email and social links. Same icons as the facilitator page. -->
   <link rel="icon" type="image/png" href="favicon.png?v=2">
   <link rel="apple-touch-icon" href="https://nyc-pia.github.io/parent-talks-signup/apple-touch-icon.png?v=2">
@@ -426,9 +429,27 @@
   if (!TALK_ID) {
     renderPage({ ok: 'false', error: 'This link is missing its Parent Talk. Please use the link you were sent.' });
   } else {
+    // Show this browser's last copy of the talk right away, then refresh it
+    // from the script. A closed talk is never shown from the saved copy.
+    const KEY = 'rsvp-talk-' + TALK_ID;
+    let shown = false;
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (saved && saved.ok === 'true' && saved.talk && saved.talk.open === 'true') {
+        renderPage(saved); shown = true;
+      }
+    } catch (e) {}
     api('GET')
-      .then(renderPage)
-      .catch(() => renderPage({ ok: 'false', error: 'Could not load this Parent Talk. Please try again.' }));
+      .then(d => {
+        renderPage(d);
+        try {
+          if (d && d.ok === 'true') localStorage.setItem(KEY, JSON.stringify(d));
+          else localStorage.removeItem(KEY);
+        } catch (e) {}
+      })
+      .catch(() => {
+        if (!shown) renderPage({ ok: 'false', error: 'Could not load this Parent Talk. Please try again.' });
+      });
   }
 </script>
 </body>
